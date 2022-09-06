@@ -482,7 +482,7 @@ pragma solidity ^0.8.2;
     function buyItem(uint256 saleID , uint256 amount ) public payable activSales(saleID) {
         require(!itemsForSale[saleID].auctionable , "auctionable sales dont allow outright purchase, place a bid");
         require(amount >= itemsForSale[saleID].askingPrice , "amount below asking price");
-        require(processedPayment(saleID , amount) , "insuficient balance");
+        require(processedPayment(saleID , amount) , "insufficient balance");
          ItemForSale storage currentSaleItem =  itemsForSale[saleID];
          paymentMethod storage currentPaymentMethod = paymentMethods[currentSaleItem.acceptedPaymentMethod];
          if(currentPaymentMethod.fees > 0 && !isExcludedFromFees[currentSaleItem.owner]){
