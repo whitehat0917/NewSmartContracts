@@ -1,3 +1,7 @@
+/**
+ *Submitted for verification at BscScan.com on 2022-09-10
+*/
+
 // SPDX-License-Identifier: MIT
 
 pragma solidity 0.8.7;
@@ -402,7 +406,7 @@ contract Presale is Ownable {
     sellAmount = sellAmount.add(_purchaseAmount);
 
     require(sellAmount <= totalAmount, "The amount entered exceeds IDO Goal");
-    require(nowTime < saleStartTime.add(privateSalePeriod), "Presale is finished.");
+    require(nowTime < saleStartTime.add(privateSalePeriod) || finishIdo == false, "Presale is finished.");
 
     if (boughtTokens[msg.sender] == false){
       boughtTokens[msg.sender] = true;
@@ -420,13 +424,13 @@ contract Presale is Ownable {
     uint256 _purchaseAmount = purchasedAmount[msg.sender];
     require(_purchaseAmount > 0, "Can't claim.");
     
+    IERC20(blstToken).approve(msg.sender, blstAmount);
     IERC20(blstToken).safeTransfer(msg.sender, _purchaseAmount.mul(rate).mul(10 ** 18).div(100));
     claimed[msg.sender] = true;
     return true;
   }
 
   function withdraw() external onlyOwner {
-    require(block.timestamp > saleStartTime.add(privateSalePeriod), "Presale is not finished yet.");
     uint256 blstAmount = (totalAmount.sub(sellAmount)).mul(rate).mul(10 ** 18).div(100);
     if (totalAmount < sellAmount){
       blstAmount = IERC20(blstToken).balanceOf(address(this));
