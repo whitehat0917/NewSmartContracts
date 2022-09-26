@@ -293,6 +293,7 @@ contract Presale is Ownable {
   bool public openIdo = false;
   bool public openClaim = false;
   bool public finishIdo = false;
+  bool public openPublic = false;
   uint256 public saleStartTime;
   uint256 public privateSalePeriod = 1 hours;
   
@@ -371,6 +372,10 @@ contract Presale is Ownable {
     finishIdo = _open;
   }
 
+  function setOpenPublic(bool _open) external onlyOwner {
+    openPublic = _open;
+  }
+
   function isOpenForUser(address _user) public view returns (bool) {
     if(!openIdo || whitelisted[_user] == false || extraWhitelisted[_user] == false || (boughtTokens[_user] && purchasedAmount[_user] == maxPurchaseAmount) || (boughtTokens[_user] && purchasedAmount[_user] == maxExtraPurchaseAmount))
       return false;
@@ -391,22 +396,26 @@ contract Presale is Ownable {
 
   function purchase(uint256 _purchaseAmount) external returns (bool) {
     require(openIdo == true, "IDO is closed");
-    require(purchasedAmount[msg.sender] < maxPurchaseAmount, "You've already purchased max amount.");
     require(_purchaseAmount >= minPurchaseAmount, "Less than min amount");
-    require(whitelisted[msg.sender] == true || extraWhitelisted[msg.sender] == true, "You are not a whitelisted user.");
+    if (openPublic == false)
+      require(whitelisted[msg.sender] == true || extraWhitelisted[msg.sender] == true, "You are not a whitelisted user.");
 
-    if (whitelisted[msg.sender] == true)
+    if (whitelisted[msg.sender] == true){
       require(_purchaseAmount <= maxPurchaseAmount, "More than max amount");
-    else if (extraWhitelisted[msg.sender] == true)
+      require(purchasedAmount[msg.sender].add(_purchaseAmount) <= maxPurchaseAmount, "You can not purchased more than max amount at total.");
+    } else if (extraWhitelisted[msg.sender] == true || openPublic == true){
       require(_purchaseAmount <= maxExtraPurchaseAmount, "More than max amount");
+      require(purchasedAmount[msg.sender].add(_purchaseAmount) <= maxExtraPurchaseAmount, "You can not purchased more than max amount at total.");
+    }
 
     uint256 nowTime = block.timestamp;
     uint256 busdVal = IERC20(busd).balanceOf(msg.sender);
     require(busdVal >= _purchaseAmount, "Insufficient busd balance.");
-    sellAmount = sellAmount.add(_purchaseAmount);
 
-    require(sellAmount <= totalAmount, "The amount entered exceeds IDO Goal");
+    require(sellAmount.add(_purchaseAmount) <= totalAmount, "The amount entered exceeds IDO Goal");
     require(nowTime < saleStartTime.add(privateSalePeriod) || finishIdo == false, "Presale is finished.");
+
+    sellAmount = sellAmount.add(_purchaseAmount);
 
     if (boughtTokens[msg.sender] == false){
       boughtTokens[msg.sender] = true;
@@ -424,7 +433,7 @@ contract Presale is Ownable {
     uint256 _purchaseAmount = purchasedAmount[msg.sender];
     require(_purchaseAmount > 0, "Can't claim.");
     
-    IERC20(blstToken).approve(msg.sender, blstAmount);
+    IERC20(blstToken).approve(msg.sender, _purchaseAmount.mul(rate).mul(10 ** 18).div(100));
     IERC20(blstToken).safeTransfer(msg.sender, _purchaseAmount.mul(rate).mul(10 ** 18).div(100));
     claimed[msg.sender] = true;
     return true;
